@@ -1,0 +1,7 @@
+framework module SameName {
+  umbrella header "SameName.h"
+  export *
+  module * {
+    export *
+  }
+}

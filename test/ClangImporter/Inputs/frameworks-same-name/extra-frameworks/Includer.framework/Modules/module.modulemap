@@ -1,0 +1,7 @@
+framework module Includer {
+  umbrella header "Includer.h"
+  export *
+  module * {
+    export *
+  }
+}

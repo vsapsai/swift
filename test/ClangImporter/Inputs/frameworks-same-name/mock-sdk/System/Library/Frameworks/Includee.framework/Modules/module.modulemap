@@ -1,0 +1,7 @@
+framework module Includee {
+  umbrella header "Includee.h"
+  export *
+  module * {
+    export *
+  }
+}
