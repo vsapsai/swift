@@ -323,6 +323,9 @@ ModuleDependencyScanningWorker::scanFilesystemForClangModuleDependency(
     Identifier moduleName, LookupModuleOutputCallback lookupModuleOutput,
     const llvm::DenseSet<clang::dependencies::ModuleID>
         &alreadySeenModules) {
+  if (llvm::sys::fs::exists("/home/ubuntu/scan-flag.txt")) {
+    llvm::errs() << "DBG: swift::scan-clang-modules\n";
+  }
   diagnosticReporter.registerNamedClangModuleQuery();
 
   // The action controller drives module-output lookups for this query. It only
@@ -1009,6 +1012,7 @@ ModuleDependencyScanner::performDependencyScan(ModuleDependencyID rootModuleID) 
 ModuleDependencyIDSetVector
 ModuleDependencyScanner::resolveImportedModuleDependencies(
     const ModuleDependencyID &rootModuleID) {
+  // vsapsai: this method *is* executed during Swift modular build.
   ModuleDependencyIDSetVector allModules;
   PrettyStackTraceStringAction trace(
       "Resolving transitive closure of dependencies of: ",
@@ -1231,10 +1235,14 @@ void ModuleDependencyScanner::performClangModuleLookup(
     const ImportStatementInfoMap &unresolvedImportsMap,
     const ImportStatementInfoMap &unresolvedOptionalImportsMap,
     BatchClangModuleLookupResult &result) {
+  bool IsDebug = llvm::sys::fs::exists("/home/ubuntu/scan-flag.txt");
+  if (IsDebug) {
+    llvm::errs() << "DBG: swift::performClangModuleLookup\n";
+  }
   auto seenClangModules = DependencyCache.getAlreadySeenClangModules();
   std::mutex resultAccessLock;
   auto scanForClangModuleDependency = [this, &result, &resultAccessLock,
-                                       &seenClangModules](
+                                       &seenClangModules, IsDebug](
                                           Identifier moduleIdentifier) {
     auto scanResult = withDependencyScanningWorker(
         [&](ModuleDependencyScanningWorker *ScanningWorker) {
@@ -1247,6 +1255,10 @@ void ModuleDependencyScanner::performClangModuleLookup(
     {
       std::lock_guard<std::mutex> guard(resultAccessLock);
       if (scanResult) {
+        if (IsDebug) {
+          llvm::errs() << "DBG> scan result for '" << moduleIdentifier << "':\n";
+          scanResult->dump(llvm::errs());
+        }
         llvm::for_each(scanResult->ModuleGraph, [&result](const auto &dep) {
           result.discoveredDependencyInfos.try_emplace(dep.ID.ModuleName, dep);
         });
